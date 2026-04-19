@@ -2,6 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request, Header, HTTPEx
 from pydantic import EmailStr
 from fastapi.responses import HTMLResponse
 from core import settings
+import templates
 from services import Mailer
 from workers import MailService
 from services import render_template
@@ -19,6 +20,10 @@ def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")) -> str:
 
 
 from fastapi_mail import MessageType
+
+@router.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @router.post("/send-welcome")
 async def send_welcome(email: EmailStr, username: str, background_tasks: BackgroundTasks):
