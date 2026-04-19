@@ -1,10 +1,11 @@
 from pydantic import BaseModel, EmailStr
+from fastapi_mail import MessageType
 from typing import Optional
 
 class CustomMessageSchema(BaseModel):
     recipients: list[EmailStr]
     subject: str
-    subtype: Optional[str] = None
+    subtype: MessageType = MessageType.html
     body: str | None = None
 
 class CustomConnectionConfig(BaseModel):

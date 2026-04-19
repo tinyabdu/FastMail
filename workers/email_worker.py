@@ -137,7 +137,8 @@ class MailService:
         </p>
         """
         html = _base_template("One-Time Login Code", "#2196F3", body)
-        await _send(email_to, "Your Tsira login code", html)
+        # await _send(email_to, "Your Tsira login code", html)
+        return html
 
     @staticmethod
     async def reset_password(email_to: EmailStr, reset_link: str) -> None:

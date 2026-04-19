@@ -8,8 +8,8 @@ _config = ConnectionConfig(
     MAIL_PASSWORD=SecretStr(settings.MAIL_PASSWORD),
     MAIL_PORT=settings.MAIL_PORT,
     MAIL_SERVER=settings.MAIL_SERVER,
-    MAIL_SSL_TLS=False,
-    MAIL_STARTTLS=True,
+    MAIL_SSL_TLS=True,
+    MAIL_STARTTLS=False
 )
 
 

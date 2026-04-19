@@ -9,11 +9,11 @@ class Settings(BaseModel):
     DEBUG: bool = get_env("DEBUG", "False") == "True"
 
     # SMTP CONFIG
-    MAIL_SERVER: str = get_env("SMTP_HOST", required=True)
-    MAIL_PORT: int = int(get_env("SMTP_PORT", 587))
-    MAIL_USERNAME: str = get_env("SMTP_USER", required=True)
-    MAIL_PASSWORD: str = get_env("SMTP_PASS", required=True)
-    MAIL_FROM: EmailStr = get_env("FROM_EMAIL", required=True)
+    MAIL_USERNAME: str = get_env("MAIL_USERNAME", required=True)
+    MAIL_FROM: EmailStr = get_env("MAIL_FROM", required=True)
+    MAIL_PASSWORD: str = get_env("MAIL_PASSWORD", required=True)
+    MAIL_PORT: int = int(get_env("MAIL_PORT", 465))
+    MAIL_SERVER: str = get_env("MAIL_SERVER", required=True)
 
     # SECURITY
     API_SECRET_KEY: str = get_env("API_SECRET_KEY", required=True)
