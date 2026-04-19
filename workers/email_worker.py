@@ -190,7 +190,8 @@ class MailService:
         </div>
         """
         html = _base_template("Welcome to Tsira!", "#4CAF50", body)
-        await _send(email_to, "Welcome to Tsira 🎉", html)
+        # await _send(email_to, "Welcome to Tsira 🎉", html)
+        return html
 
     @staticmethod
     async def account_banned(email_to: EmailStr, reason: str | None = None) -> None:
@@ -211,7 +212,8 @@ class MailService:
         </p>
         """
         html = _base_template("Account Suspended", "#e53935", body)
-        await _send(email_to, "Your Tsira account has been suspended", html)
+        # await _send(email_to, "Your Tsira account has been suspended", html)
+        return html
 
     @staticmethod
     async def account_reactivated(email_to: EmailStr) -> None:
@@ -246,7 +248,8 @@ class MailService:
         </p>
         """
         html = _base_template("Account Deleted", "#9E9E9E", body)
-        await _send(email_to, "Your Tsira account has been deleted", html)
+        # await _send(email_to, "Your Tsira account has been deleted", html)
+        return html
 
     @staticmethod
     async def payment_successful(
@@ -281,7 +284,8 @@ class MailService:
         </p>
         """
         html = _base_template("Payment Successful", "#4CAF50", body)
-        await _send(email_to, f"Payment receipt – {amount} {currency}", html)
+        # await _send(email_to, f"Payment receipt – {amount} {currency}", html)
+        return html
 
     @staticmethod
     async def payment_failed(
@@ -306,7 +310,8 @@ class MailService:
         </p>
         """
         html = _base_template("Payment Failed", "#e53935", body)
-        await _send(email_to, f"Payment failed – {amount} {currency}", html)
+        # await _send(email_to, f"Payment failed – {amount} {currency}", html)
+        return html
 
     @staticmethod
     async def subscription_upgraded(
@@ -324,7 +329,8 @@ class MailService:
         </p>
         """
         html = _base_template(f"Upgraded to {plan_name}", "#9C27B0", body)
-        await _send(email_to, f"You're now on the {plan_name} plan!", html)
+        # await _send(email_to, f"You're now on the {plan_name} plan!", html)
+        return html
 
     @staticmethod
     async def subscription_cancelled(email_to: EmailStr, end_date: str) -> None:
@@ -354,7 +360,8 @@ class MailService:
         </p>
         """
         html = _base_template("Report Received", "#607D8B", body)
-        await _send(email_to, "We received your report", html)
+        # await _send(email_to, "We received your report", html)
+        return html
 
     @staticmethod
     async def new_login_alert(
@@ -384,7 +391,8 @@ class MailService:
         </p>
         """
         html = _base_template("New Login Detected", "#FF5733", body)
-        await _send(email_to, "New login to your Tsira account", html)
+        # await _send(email_to, "New login to your Tsira account", html)
+        return html
 
     @staticmethod
     async def congratulations(email_to: EmailStr, achievement: str) -> None:
@@ -398,4 +406,5 @@ class MailService:
         </p>
         """
         html = _base_template("Achievement Unlocked", "#FF9800", body)
-        await _send(email_to, f"You unlocked: {achievement}", html)
+        # await _send(email_to, f"You unlocked: {achievement}", html)
+        return html
