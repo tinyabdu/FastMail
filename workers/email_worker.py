@@ -1,24 +1,19 @@
+import asyncio
 from fastapi_mail import FastMail, MessageType, MessageSchema, ConnectionConfig
-from starlette.responses import JSONResponse
 from pydantic import SecretStr, EmailStr
-from utils import rate_limiter
-from core import settings
+from utils.rate_limiter import rate_limit
+from core.settings import settings
 
-MAIL_USERNAME = settings.MAIL_USERNAME
-MAIL_FROM = str(settings.MAIL_FROM)
-MAIL_PASSWORD = str(settings.MAIL_PASSWORD)
-MAIL_PORT = settings.MAIL_PORT
-MAIL_SERVER = str(settings.MAIL_SERVER)
-
-config = ConnectionConfig(
-    MAIL_USERNAME=MAIL_USERNAME,
-    MAIL_FROM=MAIL_FROM,
-    MAIL_PASSWORD=SecretStr(MAIL_PASSWORD),
-    MAIL_PORT=MAIL_PORT,
-    MAIL_SERVER=MAIL_SERVER,
+_config = ConnectionConfig(
+    MAIL_USERNAME=settings.MAIL_USERNAME,
+    MAIL_FROM=str(settings.MAIL_FROM),
+    MAIL_PASSWORD=SecretStr(settings.MAIL_PASSWORD),
+    MAIL_PORT=settings.MAIL_PORT,
+    MAIL_SERVER=settings.MAIL_SERVER,
     MAIL_SSL_TLS=False,
     MAIL_STARTTLS=True,
 )
+
 
 # Shared helpers
 
@@ -29,15 +24,12 @@ def _base_template(title: str, accent: str, body_html: str) -> str:
     <body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:30px 0;">
       <div style="max-width:600px;margin:auto;background:#fff;border-radius:10px;
                   box-shadow:0 2px 12px rgba(0,0,0,.1);overflow:hidden;">
-        <!-- Header bar -->
         <div style="background:{accent};padding:20px 30px;">
           <h2 style="color:#fff;margin:0;font-size:22px;">{title}</h2>
         </div>
-        <!-- Body -->
         <div style="padding:30px;">
           {body_html}
         </div>
-        <!-- Footer -->
         <div style="background:#f9f9f9;padding:15px 30px;border-top:1px solid #eee;">
           <p style="font-size:12px;color:#aaa;margin:0;text-align:center;">
             &copy; 2026 Tsira &mdash; All rights reserved.<br>
@@ -49,9 +41,8 @@ def _base_template(title: str, accent: str, body_html: str) -> str:
     </html>
     """
 
-async def _send(email_to: EmailStr, subject: str, html: str, ip: str = "global") -> None:
 
-    # Rate limit protection
+async def _send(email_to: EmailStr, subject: str, html: str, ip: str = "global") -> None:
     if not rate_limit(ip):
         raise Exception("Too many email requests")
 
@@ -64,22 +55,55 @@ async def _send(email_to: EmailStr, subject: str, html: str, ip: str = "global")
 
     try:
         await asyncio.wait_for(
-            FastMail(config).send_message(message),
+            FastMail(_config).send_message(message),
             timeout=10
         )
     except Exception as e:
         print("[EMAIL ERROR]:", str(e))
 
 
-# Mail Service 
+# Convenience functions (exported via __init__)
+
+async def send_email(email_to: str, subject: str, body: str, ip: str = "global") -> None:
+    """Send a plain HTML email."""
+    await _send(email_to, subject, body, ip)
+
+
+async def send_otp(email_to: str, otp_code: str, ip: str = "global") -> None:
+    """Send an OTP verification code."""
+    await MailService.verify_account(email_to, otp_code)
+
+
+async def send_bulk_email(recipients: list[str], subject: str, body: str) -> None:
+    """Send the same email to multiple recipients (sequentially)."""
+    for recipient in recipients:
+        await _send(recipient, subject, body)
+
+
+async def send_template_email(
+    email_to: str, template_name: str, context: dict, subject: str
+) -> None:
+    """Render a template and send it."""
+    from services.templates import render_template
+    html = render_template(template_name, **context)
+    await _send(email_to, subject, html)
+
+
+async def send_scheduled_email(
+    email_to: str, subject: str, body: str, delay_seconds: float = 0
+) -> None:
+    """Send an email after an optional delay."""
+    if delay_seconds > 0:
+        await asyncio.sleep(delay_seconds)
+    await _send(email_to, subject, body)
+
+
+# Mail Service
 
 class MailService:
 
-    # Auth & Account
-
     @staticmethod
     async def verify_account(email_to: EmailStr, otp_code: str) -> None:
-        """OTP sent right after registration so the user can verify their email."""
         body = f"""
         <p style="font-size:16px;color:#333;">Hi there,</p>
         <p style="font-size:16px;color:#333;">
@@ -97,7 +121,6 @@ class MailService:
 
     @staticmethod
     async def otp_login(email_to: EmailStr, otp_code: str) -> None:
-        """One-time-password login email."""
         body = f"""
         <p style="font-size:16px;color:#333;">Hi,</p>
         <p style="font-size:16px;color:#333;">
@@ -118,7 +141,6 @@ class MailService:
 
     @staticmethod
     async def reset_password(email_to: EmailStr, reset_link: str) -> None:
-        """Password reset link."""
         body = f"""
         <p style="font-size:16px;color:#333;">Hello,</p>
         <p style="font-size:16px;color:#333;">
@@ -137,7 +159,6 @@ class MailService:
 
     @staticmethod
     async def password_changed(email_to: EmailStr) -> None:
-        """Security confirmation after a password change."""
         body = """
         <p style="font-size:16px;color:#333;">Hi,</p>
         <p style="font-size:16px;color:#333;">
@@ -151,11 +172,8 @@ class MailService:
         html = _base_template("Password Changed", "#607D8B", body)
         await _send(email_to, "Your password has been changed", html)
 
-    # Account lifecycle
-
     @staticmethod
     async def welcome(email_to: EmailStr, username: str) -> None:
-        """Warm welcome sent after successful email verification."""
         body = f"""
         <p style="font-size:18px;color:#333;">Welcome, <strong>{username}</strong>! 🎉</p>
         <p style="font-size:16px;color:#333;">
@@ -175,7 +193,6 @@ class MailService:
 
     @staticmethod
     async def account_banned(email_to: EmailStr, reason: str | None = None) -> None:
-        """Notify user their account has been suspended/banned."""
         reason_block = (
             f'<p style="font-size:14px;color:#555;"><strong>Reason:</strong> {reason}</p>'
             if reason else ""
@@ -197,7 +214,6 @@ class MailService:
 
     @staticmethod
     async def account_reactivated(email_to: EmailStr) -> None:
-        """Notify user their account has been unbanned / reactivated."""
         body = """
         <p style="font-size:16px;color:#333;">Good news!</p>
         <p style="font-size:16px;color:#333;">
@@ -217,7 +233,6 @@ class MailService:
 
     @staticmethod
     async def account_deleted(email_to: EmailStr) -> None:
-        """Confirmation that the account and all its data have been deleted."""
         body = """
         <p style="font-size:16px;color:#333;">Hello,</p>
         <p style="font-size:16px;color:#333;">
@@ -232,8 +247,6 @@ class MailService:
         html = _base_template("Account Deleted", "#9E9E9E", body)
         await _send(email_to, "Your Tsira account has been deleted", html)
 
-    # Payments 
-
     @staticmethod
     async def payment_successful(
         email_to: EmailStr,
@@ -242,7 +255,6 @@ class MailService:
         transaction_id: str,
         description: str,
     ) -> None:
-        """Receipt after a successful payment."""
         body = f"""
         <p style="font-size:16px;color:#333;">Hi,</p>
         <p style="font-size:16px;color:#333;">
@@ -267,7 +279,7 @@ class MailService:
           Questions? Contact <a href="mailto:support@yourapp.com">support@yourapp.com</a>.
         </p>
         """
-        html = _base_template("Payment Successful ", "#4CAF50", body)
+        html = _base_template("Payment Successful", "#4CAF50", body)
         await _send(email_to, f"Payment receipt – {amount} {currency}", html)
 
     @staticmethod
@@ -277,7 +289,6 @@ class MailService:
         currency: str,
         reason: str | None = None,
     ) -> None:
-        """Alert when a payment attempt fails."""
         reason_block = (
             f'<p style="font-size:14px;color:#e53935;"><strong>Reason:</strong> {reason}</p>'
             if reason else ""
@@ -300,7 +311,6 @@ class MailService:
     async def subscription_upgraded(
         email_to: EmailStr, plan_name: str, next_billing_date: str
     ) -> None:
-        """Confirmation after plan upgrade."""
         body = f"""
         <p style="font-size:16px;color:#333;">Hi,</p>
         <p style="font-size:16px;color:#333;">
@@ -317,7 +327,6 @@ class MailService:
 
     @staticmethod
     async def subscription_cancelled(email_to: EmailStr, end_date: str) -> None:
-        """Notify when a subscription is cancelled."""
         body = f"""
         <p style="font-size:16px;color:#333;">Hi,</p>
         <p style="font-size:16px;color:#333;">
@@ -331,11 +340,8 @@ class MailService:
         html = _base_template("Subscription Cancelled", "#FF9800", body)
         await _send(email_to, "Your subscription has been cancelled", html)
 
-    # Social / In-app notifications
-
     @staticmethod
     async def report_received(email_to: EmailStr, report_type: str) -> None:
-        """Acknowledge receipt of a user report."""
         body = f"""
         <p style="font-size:16px;color:#333;">Hello,</p>
         <p style="font-size:16px;color:#333;">
@@ -353,7 +359,6 @@ class MailService:
     async def new_login_alert(
         email_to: EmailStr, ip_address: str, device: str, location: str
     ) -> None:
-        """Security alert when a new login is detected from an unfamiliar device/IP."""
         body = f"""
         <p style="font-size:16px;color:#333;">Hi,</p>
         <p style="font-size:16px;color:#333;">
@@ -382,9 +387,8 @@ class MailService:
 
     @staticmethod
     async def congratulations(email_to: EmailStr, achievement: str) -> None:
-        """Generic congratulations / milestone email."""
         body = f"""
-        <p style="font-size:18px;color:#333;">Congratulations! </p>
+        <p style="font-size:18px;color:#333;">Congratulations!</p>
         <p style="font-size:16px;color:#333;">
           You just unlocked: <strong style="color:#FF9800;">{achievement}</strong>
         </p>
@@ -392,5 +396,5 @@ class MailService:
           Keep it up &mdash; there are more milestones waiting for you on Tsira.
         </p>
         """
-        html = _base_template("Achievement Unlocked ", "#FF9800", body)
+        html = _base_template("Achievement Unlocked", "#FF9800", body)
         await _send(email_to, f"You unlocked: {achievement}", html)

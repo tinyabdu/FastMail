@@ -1,6 +1,6 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Header, HTTPException
 from fastapi.responses import HTMLResponse
-from core import settings
+from core.settings import settings
 from services.mailer import Mailer
 from services.templates import render_template
 from schema import SendEmailRequest
@@ -10,12 +10,14 @@ router = APIRouter()
 mailer = Mailer()
 
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != settings.API_SECRET_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    return x_api_key
 
-@app.post("/send/email")
-async def send(payload: SendEmailRequest, dependencies=[Depends(settings.verify_api_key)]):
+
+@router.post("/send")
+async def send(payload: SendEmailRequest, _: str = Depends(verify_api_key)):
     config = ConnectionConfig(**payload.config.model_dump())
     message = MessageSchema(**payload.message.model_dump())
 
@@ -28,10 +30,8 @@ async def send(payload: SendEmailRequest, dependencies=[Depends(settings.verify_
     }
 
 
-
 @router.post("/send-otp")
 async def send_otp(email: str, name: str, otp: str, background_tasks: BackgroundTasks):
-
     html = render_template("otp.html", name=name, otp=otp)
 
     background_tasks.add_task(
