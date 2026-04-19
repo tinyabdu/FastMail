@@ -6,25 +6,11 @@ from schema import SendEmailRequest
 
 templates = Jinja2Templates(directory="templates")
 
-app = FastAPI()
 
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+app = FastAPI(title="Production Email Service")
 
-@app.post("/send/email")
-async def send(payload: SendEmailRequest):
-    config = ConnectionConfig(**payload.config.model_dump())
-    message = MessageSchema(**payload.message.model_dump())
-
-    fm = FastMail(config)
-    await fm.send_message(message)
-
-    return {
-        "message": "Email has been sent",
-        "recipients": payload.message.recipients
-    }
+app.include_router(email_router, prefix="/email")
 
 if __name__ == "__main__":
     import uvicorn
