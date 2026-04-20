@@ -117,7 +117,8 @@ class MailService:
         </div>
         """
         html = _base_template("Verify Your Account", "#4CAF50", body)
-        await _send(email_to, "Your Tsira verification code", html)
+        # await _send(email_to, "Your Tsira verification code", html)
+        return html
 
     @staticmethod
     async def otp_login(email_to: EmailStr, otp_code: str) -> None:
