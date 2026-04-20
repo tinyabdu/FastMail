@@ -25,6 +25,14 @@ from fastapi_mail import MessageType
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+
+@router.post("/send-verify-account")
+async def send_verify_account(email: EmailStr, otp_code: str, background_tasks: BackgroundTasks):
+    html = await MailService.verify_account(email, otp_code)
+    background_tasks.add_task(mailer.send_email, to=email, subject="Verify your account", html=html)
+    return {"message": "Verification email has been sent", "email": email}
+
+
 @router.post("/send-welcome")
 async def send_welcome(email: EmailStr, username: str, background_tasks: BackgroundTasks):
     html = await MailService.welcome(email, username)
@@ -64,8 +72,8 @@ async def send_welcome(email: EmailStr, otp: str, background_tasks: BackgroundTa
 @router.post("/send-delete")
 async def send_delete_notification(email: EmailStr, background_tasks: BackgroundTasks):
     html = await MailService.account_deleted(email)
-    background_tasks.add_task(mailer.send_email, to=email, subject="Your OTP Code", html=html)
-    return {"message": "OTP email has been sent", "email": email}
+    background_tasks.add_task(mailer.send_email, to=email, subject="You deleted your account", html=html)
+    return {"message": "Delete notification email has been sent", "email": email}
 
 
 @router.post("/send-payment")
