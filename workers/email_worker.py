@@ -174,7 +174,7 @@ class MailService:
         await _send(email_to, "Your password has been changed", html)
 
     @staticmethod
-    async def welcome(email_to: EmailStr, username: str) -> None:
+    async def welcome(username: str) -> None:
         body = f"""
         <p style="font-size:18px;color:#333;">Welcome, <strong>{username}</strong>! 🎉</p>
         <p style="font-size:16px;color:#333;">
@@ -182,7 +182,7 @@ class MailService:
           <strong>Tsira</strong> has to offer.
         </p>
         <div style="text-align:center;margin:30px 0;">
-          <a href="https://yourapp.com/dashboard"
+          <a href="https://yourapp.com/app"
              style="background:#4CAF50;color:#fff;padding:14px 28px;
                     text-decoration:none;border-radius:6px;font-size:16px;">
             Go to Dashboard

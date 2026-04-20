@@ -35,7 +35,7 @@ async def send_verify_account(email: EmailStr, otp_code: str, background_tasks: 
 
 @router.post("/send-welcome")
 async def send_welcome(email: EmailStr, username: str, background_tasks: BackgroundTasks):
-    html = await MailService.welcome(email, username)
+    html = await MailService.welcome(username)
     background_tasks.add_task(mailer.send_email, to=email, subject="Welcome to our service!", html=html)
     return {"message": "Welcome email has been sent", "email": email}
 
